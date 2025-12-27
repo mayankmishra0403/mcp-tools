@@ -1,18 +1,20 @@
-import { Client, Databases } from "node-appwrite";
-
 /**
  * Appwrite Function: auth0-signup
  * Platform: Auth0 OAuth 2.0 + Management API
+ * Server: Auth0 MCP Server
  * 
- * This function handles Auth0 user signup:
- * 1. Retrieves Auth0 configuration from Appwrite Database
- * 2. Creates user in Auth0 using Management API
- * 3. Optionally triggers Auth0 rules/actions
- * 4. Returns JWT token for auto-login
+ * Handles Auth0 user signup:
+ * 1. Validates email and password
+ * 2. Creates user using Auth0 Management API
+ * 3. Returns user ID and metadata
  */
 
+import Auth0Server from "./server.js";
+
+const auth0 = new Auth0Server();
+
 export default async ({ req, res, log }) => {
-  log(`[auth0-signup] Request method: ${req.method}`);
+  log(`[auth0-signup] ${req.method} request received`);
 
   if (req.method !== "POST") {
     return res.status(405).json({
@@ -32,91 +34,21 @@ export default async ({ req, res, log }) => {
       });
     }
 
-    // Initialize Appwrite client
-    const client = new Client()
-      .setEndpoint(process.env.APPWRITE_ENDPOINT)
-      .setProject(process.env.APPWRITE_PROJECT_ID)
-      .setKey(process.env.APPWRITE_API_KEY);
-
-    const databases = new Databases(client);
-
-    // Retrieve Auth0 configuration
-    log("[auth0-signup] Fetching Auth0 config...");
-
-    const config = await databases.getDocument(
-      "mcp_hub",
-      "auth0_projects",
-      "printHub"
-    );
-
-    const { domain, managementApiEndpoint, clientId, clientSecret } = config;
-
-    // Get Management API token
-    log("[auth0-signup] Getting Management API token...");
-
-    const mgmtTokenResponse = await fetch(
-      `https://${domain}/oauth/token`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          client_id: clientId,
-          client_secret: clientSecret,
-          audience: `${managementApiEndpoint}`,
-          grant_type: "client_credentials",
-        }),
-      }
-    );
-
-    if (!mgmtTokenResponse.ok) {
-      const error = await mgmtTokenResponse.json();
-      log(`[auth0-signup] Failed to get Management API token: ${error.error}`);
-      return res.status(500).json({
-        error: "Auth0 API Error",
-        message: "Failed to authenticate with Auth0 Management API",
-      });
+    // Initialize Auth0 server
+    if (!auth0.isReady()) {
+      log("[auth0-signup] Initializing Auth0 server...");
+      await auth0.init();
     }
 
-    const { access_token: mgmtToken } = await mgmtTokenResponse.json();
-
-    // Create user in Auth0
     log("[auth0-signup] Creating user in Auth0...");
 
-    const createUserResponse = await fetch(
-      `${managementApiEndpoint}users`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${mgmtToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: email,
-          password: password,
-          connection: "Username-Password-Authentication",
-          user_metadata: {
-            firstName: firstName || "",
-            lastName: lastName || "",
-            ...metadata,
-          },
-          email_verified: false,
-        }),
-      }
-    );
+    const newUser = await auth0.createUser(email, password, {
+      firstName: firstName || "",
+      lastName: lastName || "",
+      ...metadata,
+    });
 
-    if (!createUserResponse.ok) {
-      const error = await createUserResponse.json();
-      log(`[auth0-signup] User creation failed: ${error.statusCode}`);
-      return res.status(400).json({
-        error: error.error || "User Creation Failed",
-        message: error.error_description || error.message,
-      });
-    }
-
-    const newUser = await createUserResponse.json();
-    log(`[auth0-signup] User created: ${newUser.user_id}`);
+    log(`[auth0-signup] ✅ User created: ${newUser.user_id}`);
 
     return res.status(201).json({
       success: true,
@@ -130,10 +62,10 @@ export default async ({ req, res, log }) => {
     });
 
   } catch (error) {
-    log(`[auth0-signup] Error: ${error.message}`);
+    log(`[auth0-signup] ❌ Error: ${error.message}`);
 
     return res.status(500).json({
-      error: "Internal Server Error",
+      error: "Signup Error",
       message: error.message,
       details: process.env.NODE_ENV === "development" ? error.stack : undefined,
     });

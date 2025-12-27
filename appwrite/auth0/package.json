@@ -1,14 +1,16 @@
 {
-  "name": "appwrite-auth0-functions",
-  "version": "1.0.0",
-  "description": "Auth0 Integration Functions for Appwrite",
+  "name": "appwrite-auth0-mcp-server",
+  "version": "2.0.0",
+  "description": "Auth0 MCP Server - Complete Authentication Platform for Appwrite",
   "runtime": "node-18.0",
-  "main": "login.js",
+  "main": "server.js",
   "type": "module",
   "scripts": {
     "deploy:login": "appwrite functions createDeployment --functionId auth0-login --entrypoint login.js --source ./",
     "deploy:signup": "appwrite functions createDeployment --functionId auth0-signup --entrypoint signup.js --source ./",
-    "deploy:all": "npm run deploy:login && npm run deploy:signup"
+    "deploy:password-reset": "appwrite functions createDeployment --functionId auth0-password-reset --entrypoint password-reset.js --source ./",
+    "deploy:profile": "appwrite functions createDeployment --functionId auth0-profile --entrypoint profile.js --source ./",
+    "deploy:all": "npm run deploy:login && npm run deploy:signup && npm run deploy:password-reset && npm run deploy:profile"
   },
   "dependencies": {
     "node-appwrite": "^13.0.0"
@@ -22,8 +24,15 @@
     "auth0",
     "authentication",
     "oauth2",
-    "serverless"
+    "serverless",
+    "mcp",
+    "user-management"
   ],
   "author": "mayankmishra0403",
-  "license": "MIT"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mayankmishra0403/mcp-tools.git",
+    "directory": "appwrite/auth0"
+  }
 }
