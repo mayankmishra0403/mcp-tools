@@ -1,0 +1,29 @@
+{
+  "name": "appwrite-auth0-functions",
+  "version": "1.0.0",
+  "description": "Auth0 Integration Functions for Appwrite",
+  "runtime": "node-18.0",
+  "main": "login.js",
+  "type": "module",
+  "scripts": {
+    "deploy:login": "appwrite functions createDeployment --functionId auth0-login --entrypoint login.js --source ./",
+    "deploy:signup": "appwrite functions createDeployment --functionId auth0-signup --entrypoint signup.js --source ./",
+    "deploy:all": "npm run deploy:login && npm run deploy:signup"
+  },
+  "dependencies": {
+    "node-appwrite": "^13.0.0"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "appwrite",
+    "auth0",
+    "authentication",
+    "oauth2",
+    "serverless"
+  ],
+  "author": "mayankmishra0403",
+  "license": "MIT"
+}
